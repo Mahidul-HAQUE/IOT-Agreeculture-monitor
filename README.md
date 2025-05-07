@@ -1,1 +1,2 @@
 # IOT-Agreeculture-monitor
+Here is the IOT based cordova applied Agriculture monitoring system. Here the HTML, CSS and javascript are done in basis of cordova. Also used Node.js, gradle and Android Studio etc. The config.xml is the Cordova setup for the creation of the APP. Used Command Prompt to assamble all of them into APK. For longer range monitoring we tried to use Tailscale Virtual server for the app to also run in Cellular network.
