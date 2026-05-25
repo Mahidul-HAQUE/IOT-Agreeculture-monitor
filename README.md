@@ -310,13 +310,86 @@ Login credentials are stored in the browser's `localStorage` — this is a light
 
 ---
 
+## Connecting the App to the ESP32
+
+This was the main practical issue with the original system: the app had the ESP32's IP address hardcoded. Whenever the ESP32 connected to a new network, or the router assigned it a different IP via DHCP, the app stopped working with no way to fix it short of editing the source code and rebuilding.
+
+The current version solves this in two places.
+
+### ESP32 side — mDNS hostname
+
+The ESP32 now advertises itself on the local network as `agrisense.local` using the `ESPmDNS` library. This hostname is stable regardless of what IP DHCP assigns. On most Android phones and all iOS devices, the app can reach the ESP32 at `http://agrisense.local/data` without ever knowing the IP.
+
+```cpp
+// In nrf_receiver.ino — runs automatically after WiFi connects
+if (MDNS.begin("agrisense")) {
+    MDNS.addService("http", "tcp", 80);
+}
+```
+
+The ESP32 also now serves a lightweight `/ping` endpoint that returns `{"device":"agrisense"}`. The app uses this to confirm it has found the right device before locking on to an address.
+
+### App side — 4-stage auto-discovery
+
+If `agrisense.local` does not resolve (some older Android versions have incomplete mDNS support), the app runs a discovery sequence automatically on startup and whenever the connection is lost:
+
+```
+Stage 1 → Try agrisense.local                       (~600 ms)
+Stage 2 → Try last saved IP from localStorage        (~600 ms)
+Stage 3 → Scan the same /24 subnet as the saved IP  (~2–4 s)
+           e.g. if saved IP was 192.168.1.45,
+           scans 192.168.1.1–254
+Stage 4 → Scan common subnets: 192.168.0.x,         (~8–12 s)
+          192.168.1.x, 192.168.4.x (AP mode),
+          10.0.0.x, 10.0.1.x
+```
+
+Probes in each stage run in parallel batches of 40 so even a full /24 scan finishes in a few seconds. The discovered address is saved to `localStorage` so Stage 2 succeeds instantly on the next launch.
+
+### Settings modal — always accessible
+
+A **⚙ Settings** button sits permanently in the top status bar. Tapping it opens the connection modal where the farmer can:
+
+- See which host the app is currently using
+- Type in a known IP or hostname manually and tap **Connect**
+- Tap **🔍 Auto-Discover** to run the full 4-stage scan from scratch
+- Watch a live discovery log showing exactly what the app is trying
+
+If all discovery stages fail (e.g. the phone is on a different WiFi network than the ESP32), the modal opens automatically and stays open until a working address is found or entered.
+
+### Static IP fallback (most reliable option)
+
+For deployments where the network configuration is under your control, the most robust approach is to give the ESP32 a fixed IP that is outside the router's DHCP range. Four lines in the firmware are already prepared — just uncomment them:
+
+```cpp
+// In nrf_receiver.ino, before WiFi.begin():
+IPAddress staticIP(192, 168, 1, 200);
+IPAddress gateway (192, 168, 1,   1);
+IPAddress subnet  (255, 255, 255, 0);
+IPAddress dns     (8,   8,   8,   8);
+WiFi.config(staticIP, gateway, subnet, dns);
+```
+
+Then enter `192.168.1.200` once in the app's Settings modal. It will be saved to localStorage and Stage 2 of discovery will always succeed immediately.
+
+---
+
 ## API Endpoint
 
-The ESP32 exposes one data endpoint:
+The ESP32 exposes two endpoints:
 
 ```
-GET http://<ESP32_IP>/data
+GET http://agrisense.local/ping   (or http://<IP>/ping)
+GET http://agrisense.local/data   (or http://<IP>/data)
 ```
+
+**`/ping` — identity probe (used by auto-discovery):**
+
+```json
+{ "device": "agrisense", "version": "1.0", "ip": "192.168.1.45" }
+```
+
+**`/data` — live sensor readings:**
 
 **Response (application/json):**
 

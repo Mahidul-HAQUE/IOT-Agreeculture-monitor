@@ -3,1028 +3,846 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome To The DashBoard!</title>
+    <title>AgriSense Dashboard</title>
 
-    <!-- JustGage for Gauges -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.4/raphael-min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.2.9/justgage.min.js"></script>
-	<script src="cordova.js"></script>
-
-    <!-- Chart.js for Live Plot -->
+    <script src="cordova.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-		* {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        /* ── Reset ── */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
             font-family: Arial, sans-serif;
             text-align: center;
             background-image: url(groot3.jpg);
-			background-size: cover;
+            background-size: cover;
             background-repeat: no-repeat;
             background-position: center;
             padding: 20px;
-            position: relative; /* Required for absolute positioning of the logout button */
-            opacity: 0; /* Start with opacity 0 for fade-in */
-            animation: fadeIn 0.5s ease-out forwards; /* Fade-in animation */
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-		
-        body.fade-out {
+            position: relative;
             opacity: 0;
-            transition: opacity 0.5s ease-out;
+            animation: fadeIn 0.5s ease-out forwards;
         }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        body.fade-out { opacity: 0; transition: opacity 0.5s ease-out; }
+        body.no-scroll { overflow: hidden; height: 100vh; }
 
-		body.no-scroll {
-			overflow: hidden;
-			height: 100vh; /* Ensure the body takes up the full viewport height */
-		}
-        /* White overlay for fade-out animation */
+        /* ── Page transition overlays ── */
         .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: white;
-            opacity: 0; /* Start fully transparent */
-            pointer-events: none; /* Allow clicks to pass through */
-            transition: opacity 0.5s ease-out; /* Smooth fade-out transition */
-            z-index: 1; /* Place below the splash image */
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; opacity: 0; pointer-events: none;
+            transition: opacity 0.5s ease-out; z-index: 1;
         }
-
-        body.fade-out .overlay {
-            opacity: 1; /* Fully visible white overlay */
-        }
-
-        /* Splash image container */
+        body.fade-out .overlay { opacity: 1; }
         .splash-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center; /* Center vertically */
-            justify-content: center; /* Center horizontally */
-            opacity: 0; /* Start fully transparent */
-            pointer-events: none; /* Allow clicks to pass through */
-            transition: opacity 0.5s ease-out; /* Smooth fade-out transition */
-            z-index: 2; /* Place above the white overlay */
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.5s ease-out; z-index: 2;
         }
+        body.fade-out .splash-container { opacity: 1; }
+        .splash { max-width: 80%; max-height: 80%; width: auto; height: auto; object-fit: contain; }
 
-        body.fade-out .splash-container {
-            opacity: 1; /* Fully visible splash image */
+        /* ── Connection status bar ── */
+        #conn-bar {
+            position: fixed; top: 0; left: 0; width: 100%;
+            padding: 6px 12px;
+            font-size: 12px; font-weight: bold; color: white;
+            display: flex; align-items: center; justify-content: space-between;
+            z-index: 500; transition: background 0.4s;
         }
-
-        /* Splash image */
-        .splash {
-            max-width: 80%; /* Adjust size as needed */
-            max-height: 80%; /* Adjust size as needed */
-            width: auto;
-            height: auto;
-            object-fit: contain; /* Ensure the image fits within the container */
-            filter: none; /* Remove any shadow effect */
-            margin: 0; /* Reset margin to avoid any offset */
+        #conn-bar.discovering { background: #f39c12; }
+        #conn-bar.connected   { background: #27ae60; }
+        #conn-bar.lost        { background: #e74c3c; }
+        #conn-bar.failed      { background: #c0392b; }
+        #conn-bar-text { flex: 1; text-align: left; }
+        #conn-bar-host { flex: 1; text-align: center; font-weight: normal; opacity: 0.85; font-size: 11px; }
+        #conn-settings-btn {
+            background: rgba(255,255,255,0.25); border: none; color: white;
+            border-radius: 4px; padding: 3px 8px; cursor: pointer; font-size: 13px;
         }
+        #conn-settings-btn:hover { background: rgba(255,255,255,0.4); }
 
-        h1 { 
-			color: #44bd32; 
-			text-shadow:3px 3px 3px rgba(0, 0, 0, 0.5);
-		}
-
-        .container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 20px;
+        /* ── Settings modal ── */
+        #settings-backdrop {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55); z-index: 900;
+            align-items: center; justify-content: center;
         }
-
-        .sensor-box {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-            width: 250px; /* Fixed width for all sensor boxes */
-            text-align: center;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-            flex-shrink: 0; /* Prevent shrinking */
-            flex-grow: 0; /* Prevent growing */
+        #settings-backdrop.open { display: flex; }
+        #settings-modal {
+            background: white; border-radius: 14px; padding: 28px 24px;
+            width: 90%; max-width: 420px; text-align: left;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+            animation: modalIn 0.25s ease;
         }
-
-        .sensor-box.hidden {
-            opacity: 0;
-            transform: scale(0.8);
-            pointer-events: none; /* Disable interactions with hidden containers */
+        @keyframes modalIn { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+        #settings-modal h2 { font-size: 18px; color: #2c3e50; margin-bottom: 4px; }
+        #settings-modal .subtitle { font-size: 12px; color: #7f8c8d; margin-bottom: 18px; }
+        .field-label { font-size: 13px; font-weight: bold; color: #34495e; margin-bottom: 5px; display: block; }
+        #esp-host-input {
+            width: 100%; padding: 10px 12px; border: 1.5px solid #ddd;
+            border-radius: 7px; font-size: 14px; outline: none;
+            transition: border-color 0.2s;
         }
-
-        .gauge-container {
-            width: 150px; 
-            height: 150px;
-            margin: auto;
-        }
-
-        .water-container {
-            width: 80px;
-            height: 200px; /* Fixed height */
-            background: #ddd;
-            border-radius: 10px;
-            position: relative;
-            overflow: hidden;
-            margin: auto;
-            flex-shrink: 0; /* Prevent shrinking in flex layouts */
-        }
-
-        .water-fill {
-            width: 100%;
-            background: #3498db;
-            position: absolute;
-            bottom: 0;
-            transition: height 0.5s;
-            height: 0%; /* Initialize to 0% */
-        }
-        
-        #sensor-plot {
-            width: 100% !important; 
-            height: 300px !important;
-        }
-        #live-plot {
-            width: 400px; /* Set a specific width for the live plot */
-            flex-shrink: 0; /* Prevent shrinking */
-            flex-grow: 0; /* Prevent growing */
-        }
-		.container-wrapper {
-			display: flex;
-			justify-content: center; 
-			align-items: center; 
-			min-height: 80vh; 
-		}
-		/* Animation for showing/hiding containers */
-		.sensor-box {
-			transition: transform 0.5s ease, opacity 0.5s ease; /* Smooth transition for transform and opacity */
-			position: relative; /* Required for transform animations */
-		}
-
-		.sensor-box.hidden {
-			opacity: 0; /* Fade out */
-			pointer-events: none; /* Disable interactions with hidden containers */
-		}
-
-		.sensor-box.centered {
-			opacity: 1; /* Fade in */
-			transform: translate(calc(50vw - 50%), calc(50vh - 50%)) !important; /* Move to the center of the screen */
-			position: fixed; /* Position the container in the center */
-			top: 0; /* Reset top */
-			left: 0; /* Reset left */
-			z-index: 10; /* Ensure it appears above other elements */
-		}
-		.status-line {
-			font-size: 1.3em;
-			font-weight: bold;
-			padding: 8px;
-			border-radius: 8px;
-			margin: 10px 0;
-			display: block;
-		}
-		#rainStatus.raining { background: #e6f7ff; color: blue; }
-		#rainStatus.not-raining { background: #fff3e6; color: orange; }
-		#motorModeStatus.pump-on { background: #e6ffe6; color: green; }
-		#motorModeStatus.pump-off { background: #ffe6e6; color: red; }
-		@keyframes fadeIn {
-			from { opacity: 0; }
-			to { opacity: 1; }
-		}
-
-		.sensor-box.fade-in {
-			animation: fadeIn 0.5s ease forwards;
-		}
-			 
-        .dropdown {
-            position: absolute;
-            top: -25px;
-            right: -10px;
-        }
-
-        .dropdown-button {
-            background-color: #3498db;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-        }
-
-		@keyframes slideIno {
-			from { transform: translateY(-20px); opacity: 0; }
-			to { transform: translateY(0); opacity: 1; }
-		}
-		@keyframes slideOuto {
-			from { transform: translateY(0); opacity: 1; }
-			to { transform: translateY(-20px); opacity: 0; }
-		}
-		.dropdown-content {
-			display: none;
-			position: absolute;
-			right: 0;
-			background-color: white;
-			min-width: 160px;
-			box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
-			border-radius: 5px;
-			z-index: 1;
-			animation: slideIno 0.3s ease forwards; /* Slide-in animation */
-		}
-		.dropdown-content.slide-out {
-			animation: slideOuto 0.3s ease forwards; /* Slide-out with fade-out */
-		}
-        .dropdown-content {
+        #esp-host-input:focus { border-color: #3498db; }
+        .input-hint { font-size: 11px; color: #95a5a6; margin-top: 4px; margin-bottom: 14px; }
+        #discovery-log {
+            background: #f8f9fa; border: 1px solid #eee; border-radius: 7px;
+            padding: 10px 12px; font-size: 12px; color: #555;
+            min-height: 48px; max-height: 90px; overflow-y: auto;
+            margin-bottom: 14px; font-family: monospace;
             display: none;
-            position: absolute;
-            right: 0;
-            background-color: white;
-            min-width: 160px;
-            box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
-            border-radius: 5px;
-            z-index: 1;
+        }
+        #discovery-log.open { display: block; }
+        .modal-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-primary {
+            flex: 1; padding: 10px; background: #27ae60; color: white;
+            border: none; border-radius: 7px; cursor: pointer; font-size: 14px;
+            font-weight: bold; transition: background 0.2s;
+        }
+        .btn-primary:hover { background: #219a52; }
+        .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+        .btn-secondary {
+            flex: 1; padding: 10px; background: #3498db; color: white;
+            border: none; border-radius: 7px; cursor: pointer; font-size: 14px;
+            transition: background 0.2s;
+        }
+        .btn-secondary:hover { background: #2980b9; }
+        .btn-secondary:disabled { background: #aaa; cursor: not-allowed; }
+        .btn-close {
+            display: block; margin-top: 12px; width: 100%;
+            padding: 9px; background: none; color: #7f8c8d;
+            border: 1.5px solid #ddd; border-radius: 7px; cursor: pointer;
+            font-size: 13px;
+        }
+        .btn-close:hover { background: #f5f5f5; }
+        .discovery-tip {
+            font-size: 11px; color: #7f8c8d; margin-top: 14px; padding-top: 12px;
+            border-top: 1px solid #eee; line-height: 1.5;
         }
 
-        .dropdown-content a {
-            color: black;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            transition: background-color 0.3s ease;
+        /* ── Page layout ── */
+        h1 {
+            color: #44bd32; text-shadow: 3px 3px 3px rgba(0,0,0,0.5);
+            margin-top: 42px; margin-bottom: 20px;
+            z-index: 1001; position: relative;
         }
-
-        .dropdown-content a:hover {
-            background-color: #f1f1f1;
+        .container {
+            display: flex; flex-wrap: wrap; justify-content: center;
+            gap: 20px; margin-top: 20px;
         }
-		.dropdown-content a.downlaod-option {
-			background-color: #0DEC71;
-			color: white; 
-		}
-
-		.dropdown-content a.downlaod-option:hover {
-			background-color: #0FD7FF; 
-		}
-		
-        .dropdown-content a.logout-option {
-			background-color: #ff4d4d;
-			color: white; 
-		}
-
-		.dropdown-content a.logout-option:hover {
-			background-color: #ff1a1a; 
-		}
-
-		@keyframes slideIn {
-			from { transform: translateY(-100%); }
-			to { transform: translateY(0); }
-		}
-
-		@keyframes slideOut {
-			from { transform: translateY(0); }
-			to { transform: translateY(-100%); }
-		}
-
-		h1 {
-			margin-top: 20px; 
-			margin-bottom: 20px;
-			z-index: 1001; 
-			position: relative;
-		}
-
-		.dropdown {
-			z-index: 1000; 
-			position: relative; 
-			margin-bottom: 20px;
-		}
-
-		.sensor-box.centered {
-			z-index: 999;
-		}
-		/* pH Meter Styles */
-		.ph-scale-container {
-			width: 100%;
-			margin: 20px auto;
-			position: relative;
-		}
-
-		.ph-scale {
-			width: 100%;
-			height: 20px;
-			background: linear-gradient(to right, 
-				red 0%, 
-				orange 16.66%, 
-				yellow 33.33%, 
-				green 50%, 
-				blue 66.66%, 
-				indigo 83.33%, 
-				violet 100%);
-			border-radius: 10px;
-			position: relative;
-		}
-
-		.ph-pointer {
-			width: 2px;
-			height: 30px;
-			background: black;
-			position: absolute;
-			top: -5px;
-			left: 0%;
-			transform: translateX(-50%);
-			transition: left 0.5s ease;
-		}
-
-		.ph-labels {
-			display: flex;
-			justify-content: space-between;
-			margin-top: 5px;
-			font-size: 12px;
-			color: #333;
-		}
-		/* Add to existing CSS */
-		#dialog-box.error {
-			background-color: #ffcccc; /* Light red background */
-			border: 2px solid #ff0000;
-		}
-
-		.eye.error {
-			background-color: #ff0000 !important; /* Solid red eye */
-			animation: none !important; /* Stop existing animations */
-		}
-        .eye-container {
-            position: relative;
-            width: 150px;
-            height: 80px;
-            margin: 20px auto; /* Center the eye and add spacing */
-        }
-
-        .eye {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-color: #000; /* Black eye */
-            border-radius: 50%; /* Fully rounded oval shape */
-            overflow: hidden;
-            transition: background-color 0.3s ease;
-        }
-
-        .pupil {
-            position: absolute;
-            width: 40px; /* Fixed size for circular pupil */
-            height: 40px; /* Fixed size for circular pupil */
-            background-color: #fff; /* White pupil */
-            border-radius: 50%; /* Circular pupil */
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            transition: all 0.3s ease;
-            animation: lookAround 2s infinite alternate; /* Default horizontal movement */
-        }
-
-        /* Hover effect (triggered by ESP32 data) */
-        .eye.detected {
-            background-color: red; /* Eye turns red */
-            animation: scaredVibration 0.05s infinite; /* Vibrate effect */
-        }
-
-        /* Blink animation */
-        @keyframes blink {
-            0%, 100% {
-                clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
-            }
-            50% {
-                clip-path: polygon(0 50%, 100% 50%, 100% 50%, 0 50%);
-            }
-        }
-
-        .eye.blink {
-            animation: blink 0.3s ease; /* Blink once */
-        }
-
-        /* Horizontal movement animation */
-        @keyframes lookAround {
-            0% {
-                transform: translate(-50%, -50%) translateX(-15px); /* Move left */
-            }
-            100% {
-                transform: translate(-50%, -50%) translateX(15px); /* Move right */
-            }
-        }
-
-        /* Vibration animation */
-        @keyframes scaredVibration {
-            0% {
-                transform: translate(-50%, -50%) translateX(0);
-            }
-            25% {
-                transform: translate(-50%, -50%) translateX(-2px);
-            }
-            50% {
-                transform: translate(-50%, -50%) translateX(2px);
-            }
-            75% {
-                transform: translate(-50%, -50%) translateX(-2px);
-            }
-            100% {
-                transform: translate(-50%, -50%) translateX(2px);
-            }
-        }
-
-        /* Dialog Box Styles */
-        .dialog-box {
+        .sensor-box {
+            background: white; padding: 20px; border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 250px;
             text-align: center;
-            margin-top: 10px;
-            font-size: 18px;
-            color: #333;
-            padding: 10px;
-            background-color: rgba(255, 255, 255, 0.8);
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-            width: 80%;
-            max-width: 300px;
-            margin-left: auto;
-            margin-right: auto;
+            transition: transform 0.5s ease, opacity 0.5s ease;
+            position: relative; flex-shrink: 0; flex-grow: 0;
         }
-		/* Responsive Styles */
-		@media screen and (max-width: 768px) {
-			.dropdown {
-				position: static;
-				text-align: center;
-				
-			}
+        .sensor-box.hidden { opacity: 0; pointer-events: none; }
+        .sensor-box.centered {
+            opacity: 1; position: fixed; top: 0; left: 0; z-index: 10;
+            transform: translate(calc(50vw - 50%), calc(50vh - 50%)) !important;
+        }
+        @keyframes fadeInBox { from { opacity:0; } to { opacity:1; } }
+        .sensor-box.fade-in { animation: fadeInBox 0.5s ease forwards; }
 
-			.dropdown-button {
-				width: 100%;
-				margin-bottom: 10px;
-			}
+        /* ── Gauges & sensors ── */
+        .gauge-container { width: 150px; height: 150px; margin: auto; }
+        .water-container {
+            width: 80px; height: 200px; background: #ddd;
+            border-radius: 10px; position: relative; overflow: hidden; margin: auto;
+        }
+        .water-fill {
+            width: 100%; background: #3498db; position: absolute;
+            bottom: 0; transition: height 0.5s; height: 0%;
+        }
+        #sensor-plot { width: 100% !important; height: 300px !important; }
+        #live-plot { width: 400px; flex-shrink: 0; flex-grow: 0; }
+        .status-line {
+            font-size: 1.3em; font-weight: bold; padding: 8px;
+            border-radius: 8px; margin: 10px 0; display: block;
+        }
+        #rainStatus.raining     { background: #e6f7ff; color: blue; }
+        #rainStatus.not-raining { background: #fff3e6; color: orange; }
+        #motorModeStatus.pump-on  { background: #e6ffe6; color: green; }
+        #motorModeStatus.pump-off { background: #ffe6e6; color: red; }
 
-			.dropdown-content {
-				position: static;
-				display: none; 
-				width: 100%; 
-				box-shadow: none; 
-			}
+        /* ── pH Meter ── */
+        .ph-scale-container { width: 100%; margin: 20px auto; position: relative; }
+        .ph-scale {
+            width: 100%; height: 20px;
+            background: linear-gradient(to right,
+                red 0%, orange 16.66%, yellow 33.33%,
+                green 50%, blue 66.66%, indigo 83.33%, violet 100%);
+            border-radius: 10px; position: relative;
+        }
+        .ph-pointer {
+            width: 2px; height: 30px; background: black;
+            position: absolute; top: -5px; left: 0%;
+            transform: translateX(-50%); transition: left 0.5s ease;
+        }
+        .ph-labels { display: flex; justify-content: space-between; margin-top: 5px; font-size: 12px; }
 
-			.container {
-				flex-direction: column;
-				align-items: center;
-			}
+        /* ── Eye animation ── */
+        .container-wrapper { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+        .eye-container { position: relative; width: 150px; height: 80px; margin: 20px auto; }
+        .eye {
+            position: absolute; width: 100%; height: 100%;
+            background: #000; border-radius: 50%; overflow: hidden;
+            transition: background-color 0.3s ease;
+        }
+        .pupil {
+            position: absolute; width: 40px; height: 40px; background: #fff;
+            border-radius: 50%; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            animation: lookAround 2s infinite alternate;
+        }
+        .eye.detected { background-color: red; animation: scaredVibration 0.05s infinite; }
+        @keyframes blink {
+            0%,100% { clip-path: polygon(0 0,100% 0,100% 100%,0 100%); }
+            50%      { clip-path: polygon(0 50%,100% 50%,100% 50%,0 50%); }
+        }
+        .eye.blink { animation: blink 0.3s ease; }
+        @keyframes lookAround {
+            0%   { transform: translate(-50%,-50%) translateX(-15px); }
+            100% { transform: translate(-50%,-50%) translateX(15px); }
+        }
+        @keyframes scaredVibration {
+            0%,100% { transform: translate(-50%,-50%) translateX(0); }
+            25%,75% { transform: translate(-50%,-50%) translateX(-2px); }
+            50%     { transform: translate(-50%,-50%) translateX(2px); }
+        }
+        .dialog-box {
+            text-align: center; margin-top: 10px; font-size: 18px; color: #333;
+            padding: 10px; background: rgba(255,255,255,0.8); border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 80%; max-width: 300px;
+            margin-left: auto; margin-right: auto;
+        }
 
-			.sensor-box {
-				width: 90%;
-				margin-bottom: 20px; 
-				flex-shrink: 0;
-			}
+        /* ── Dropdown menu ── */
+        .dropdown { position: absolute; top: -25px; right: -10px; z-index: 1000; }
+        .dropdown-button {
+            background: #3498db; color: white; padding: 10px 20px;
+            border: none; border-radius: 5px; cursor: pointer; font-size: 16px;
+        }
+        @keyframes slideIno {
+            from { transform: translateY(-20px); opacity: 0; }
+            to   { transform: translateY(0);     opacity: 1; }
+        }
+        @keyframes slideOuto {
+            from { transform: translateY(0);     opacity: 1; }
+            to   { transform: translateY(-20px); opacity: 0; }
+        }
+        .dropdown-content {
+            display: none; position: absolute; right: 0; background: white;
+            min-width: 160px; box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            border-radius: 5px; z-index: 1;
+        }
+        .dropdown-content.slide-out { animation: slideOuto 0.3s ease forwards; }
+        .dropdown-content a {
+            color: black; padding: 12px 16px; text-decoration: none; display: block;
+            transition: background 0.3s;
+        }
+        .dropdown-content a:hover     { background: #f1f1f1; }
+        .dropdown-content a.download-option { background: #0DEC71; color: white; }
+        .dropdown-content a.download-option:hover { background: #0FD7FF; }
+        .dropdown-content a.logout-option   { background: #ff4d4d; color: white; }
+        .dropdown-content a.logout-option:hover   { background: #ff1a1a; }
 
-			#live-plot {
-				flex-grow: 1 !important;
-				flex-shrink: 0 !important;
-				width:85% !important;
-			}
+        @keyframes slideIn  { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+        @keyframes slideOut { from { transform: translateY(0); } to { transform: translateY(-100%); } }
 
-			.sensor-box.centered {
-				position: fixed;
-				top: 170px; 
-				left: 0;
-				width: 70%; 
-				transform: translateY(-100%); 
-				animation: slideIn 0.5s ease forwards; 
-				z-index: 999;
-			}
+        h1 { margin-top: 20px; margin-bottom: 20px; }
+        .dropdown { margin-bottom: 20px; }
+        .sensor-box.centered { z-index: 999; }
 
-			.sensor-box.hidden {
-				animation: slideOut 0.5s ease forwards;
-			}
-
-		}   
- </style>
+        /* ── Responsive ── */
+        @media screen and (max-width: 768px) {
+            .dropdown { position: static; text-align: center; }
+            .dropdown-button { width: 100%; margin-bottom: 10px; }
+            .dropdown-content { position: static; width: 100%; box-shadow: none; }
+            .container { flex-direction: column; align-items: center; }
+            .sensor-box { width: 90%; margin-bottom: 20px; }
+            #live-plot { flex-grow: 1 !important; width: 85% !important; }
+            .sensor-box.centered {
+                position: fixed; top: 170px; left: 0; width: 70%;
+                transform: translateY(-100%);
+                animation: slideIn 0.5s ease forwards;
+            }
+            .sensor-box.hidden { animation: slideOut 0.5s ease forwards; }
+        }
+    </style>
 </head>
 <body>
-    <!-- White overlay for fade-out animation -->
     <div class="overlay"></div>
+    <div class="splash-container"><img src="splash.png" alt="" class="splash"></div>
 
-    <!-- Splash image container -->
-    <div class="splash-container">
-        <img src="splash.png" alt="Splash Image" class="splash">
+    <!-- ── Connection status bar ── -->
+    <div id="conn-bar" class="discovering">
+        <span id="conn-bar-text">🔍 Looking for ESP32...</span>
+        <span id="conn-bar-host"></span>
+        <button id="conn-settings-btn" onclick="openSettings()">⚙ Settings</button>
     </div>
 
-    <!-- Dropdown Menu -->
-	<div class="dropdown">
-		<button class="dropdown-button">Menu</button>
-		<div class="dropdown-content">
-			<a href="#" onclick="showAllContainers()">Show All</a>
-			<a href="#" onclick="showContainer('temperature')">Temperature</a>
-			<a href="#" onclick="showContainer('humidity')">Humidity</a>
-			<a href="#" onclick="showContainer('water-level')">Water Level</a>
-			<a href="#" onclick="showContainer('ph-meter')">pH Meter</a>
-			<a href="#" onclick="showContainer('live-plot')">Live Plot</a>
-			<a href="#" onclick="showContainer('rain-pump-status')">Rain & Motor Status</a>
-			<a href="#" onclick="generateCSV()" class="downlaod-option">Download Hourly CSV</a>
-			<a href="#" onclick="logout()" class="logout-option">Logout</a>
-		</div>
-	</div>
+    <!-- ── Settings / Discovery modal ── -->
+    <div id="settings-backdrop">
+        <div id="settings-modal">
+            <h2>📡 ESP32 Connection</h2>
+            <p class="subtitle">Configure or auto-discover the ESP32 sensor hub.</p>
 
-    <h1>Field's Condition</h1>
-    <div class="eye-container">
-        <div class="eye">
-            <div class="pupil"></div>
+            <label class="field-label" for="esp-host-input">Hostname or IP address</label>
+            <input id="esp-host-input" type="text"
+                   placeholder="agrisense.local  or  192.168.1.200"
+                   autocorrect="off" autocapitalize="none" spellcheck="false">
+            <p class="input-hint">
+                Leave as <strong>agrisense.local</strong> if the ESP32 was flashed with the
+                latest firmware (mDNS enabled). Enter a raw IP if mDNS is unavailable on
+                your phone.
+            </p>
+
+            <div id="discovery-log"></div>
+
+            <div class="modal-actions">
+                <button class="btn-primary"   id="btn-connect"  onclick="manualConnect()">Connect</button>
+                <button class="btn-secondary" id="btn-discover" onclick="startDiscovery()">🔍 Auto-Discover</button>
+            </div>
+            <button class="btn-close" id="btn-modal-close" onclick="closeSettings()">Close</button>
+
+            <p class="discovery-tip">
+                <strong>Auto-Discover</strong> first tries <em>agrisense.local</em>,
+                then your last known IP, then scans the local network.
+                If your phone is on a different WiFi than the ESP32, discovery will not work —
+                make sure both are on the same network.
+            </p>
         </div>
     </div>
-	<div class="dialog-box" id="dialog-box">Searching...</div>
-	<div class="container-wrapper">
-		<div class="container">
-			<div class="sensor-box" id="rain-pump-status">
-				<h2>Rain & Motor Status</h2>
-				<div class="status-line raining" id="rainStatus">Rain Status: Loading....</div>
-				<div class="status-line pump-on" id="motorModeStatus">Motor Mode: Loading....</div>
-			</div>
-			<!-- Temperature Sensor -->
-			<div class="sensor-box" id="temperature">
-				<h2>Temperature</h2>
-				<div class="gauge-container">
-					<div id="temperature-gauge"></div>
-				</div>
-				<p><span id="temperature-value">--</span> °C</p>
-			</div>
 
-			<!-- Humidity Sensor -->
-			<div class="sensor-box" id="humidity">
-				<h2>Humidity</h2>
-				<div class="gauge-container">
-					<div id="humidity-gauge"></div>
-				</div>
-				<p><span id="humidity-value">--</span> %</p>
-			</div>
+    <!-- ── Dashboard ── -->
+    <div class="dropdown">
+        <button class="dropdown-button">Menu ▾</button>
+        <div class="dropdown-content">
+            <a href="#" onclick="showAllContainers()">Show All</a>
+            <a href="#" onclick="showContainer('temperature')">Temperature</a>
+            <a href="#" onclick="showContainer('humidity')">Humidity</a>
+            <a href="#" onclick="showContainer('water-level')">Water Level</a>
+            <a href="#" onclick="showContainer('ph-meter')">pH Meter</a>
+            <a href="#" onclick="showContainer('live-plot')">Live Plot</a>
+            <a href="#" onclick="showContainer('rain-pump-status')">Rain & Motor Status</a>
+            <a href="#" onclick="generateCSV()" class="download-option">Download Hourly CSV</a>
+            <a href="#" onclick="logout()" class="logout-option">Logout</a>
+        </div>
+    </div>
 
-			<!-- Water Level -->
-			<div class="sensor-box" id="water-level">
-				<h2>Water Level</h2>
-				<div class="water-container">
-					<div id="water-fill" class="water-fill"></div>
-				</div>
-				<p><span id="water-value">--</span> %</p>
-			</div>
-			<!-- Soil Moisture Sensor -->
-			<div class="sensor-box" id="soil-moisture">
-				<h2>Soil Moisture</h2>
-				<div class="gauge-container">
-					<div id="soil-moisture-gauge"></div>
-				</div>
-				<p><span id="soil-moisture-value">--</span> %</p>
-			</div>
-			<!-- Live Plot -->
-			<div class="sensor-box" id="live-plot">
-				<h2>Live Sensor Data Plot</h2>
-				<canvas id="sensor-plot"></canvas> 
-			</div>
-			<!-- pH Meter -->
-			<div class="sensor-box" id="ph-meter">
-				<h2>pH Meter</h2>
-				<div class="ph-scale-container">
-					<div class="ph-scale">
-						<div class="ph-pointer" id="ph-pointer"></div>
-					</div>
-					<div class="ph-labels">
-						<span>0</span>
-						<span>7</span>
-						<span>14</span>
-					</div>
-				</div>
-				<p><span id="ph-value">--</span></p>
-			</div>
-		</div>
-	</div>
+    <h1>Field's Condition</h1>
 
-    <script>
-	document.addEventListener("deviceready", function () {
-		var permissions = cordova.plugins.permissions;
+    <div class="eye-container">
+        <div class="eye"><div class="pupil"></div></div>
+    </div>
+    <div class="dialog-box" id="dialog-box">Searching...</div>
 
-		function requestStoragePermission() {
-			if (device.platform === "Android" && parseInt(device.version) >= 11) {
-				permissions.requestPermission(permissions.MANAGE_EXTERNAL_STORAGE, function(status) {
-					if (status.hasPermission) {
-						alert("✅ Full storage access granted!");
-					} else {
-						alert("❌ Full storage access denied! Enable manually in Settings.");
-						openAndroidSettings();
-					}
-				}, function(error) {
-					console.error("Permission request error:", error);
-				});
-			} else {
-				permissions.requestPermissions(
-					[permissions.READ_EXTERNAL_STORAGE, permissions.WRITE_EXTERNAL_STORAGE],
-					function(status) {
-						if (status.hasPermission) {
-							alert("✅ Storage permissions granted!");
-						} else {
-							alert("❌ Storage permissions denied!");
-						}
-					},
-					function(error) {
-						console.error("Permission request error:", error);
-					}
-				);
-			}
-		}
+    <div class="container-wrapper">
+        <div class="container">
+            <div class="sensor-box" id="rain-pump-status">
+                <h2>Rain & Motor Status</h2>
+                <div class="status-line raining"  id="rainStatus">Rain Status: Loading...</div>
+                <div class="status-line pump-on"  id="motorModeStatus">Motor Mode: Loading...</div>
+            </div>
+            <div class="sensor-box" id="temperature">
+                <h2>Temperature</h2>
+                <div class="gauge-container"><div id="temperature-gauge"></div></div>
+                <p><span id="temperature-value">--</span> °C</p>
+            </div>
+            <div class="sensor-box" id="humidity">
+                <h2>Humidity</h2>
+                <div class="gauge-container"><div id="humidity-gauge"></div></div>
+                <p><span id="humidity-value">--</span> %</p>
+            </div>
+            <div class="sensor-box" id="water-level">
+                <h2>Water Level</h2>
+                <div class="water-container">
+                    <div id="water-fill" class="water-fill"></div>
+                </div>
+                <p><span id="water-value">--</span> %</p>
+            </div>
+            <div class="sensor-box" id="soil-moisture">
+                <h2>Soil Moisture</h2>
+                <div class="gauge-container"><div id="soil-moisture-gauge"></div></div>
+                <p><span id="soil-moisture-value">--</span> %</p>
+            </div>
+            <div class="sensor-box" id="live-plot">
+                <h2>Live Sensor Data Plot</h2>
+                <canvas id="sensor-plot"></canvas>
+            </div>
+            <div class="sensor-box" id="ph-meter">
+                <h2>pH Meter</h2>
+                <div class="ph-scale-container">
+                    <div class="ph-scale">
+                        <div class="ph-pointer" id="ph-pointer"></div>
+                    </div>
+                    <div class="ph-labels"><span>0</span><span>7</span><span>14</span></div>
+                </div>
+                <p><span id="ph-value">--</span></p>
+            </div>
+        </div>
+    </div>
 
-		function openAndroidSettings() {
-			window.plugins.intentShim.startActivity(
-				{
-					action: "android.settings.MANAGE_ALL_FILES_ACCESS_PERMISSION"
-				},
-				function() {
-					alert("📂 Please enable 'All Files Access' manually.");
-				},
-				function() {
-					console.error("Failed to open settings");
-				}
-			);
-		}
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// DISCOVERY & CONNECTION ENGINE
+// ═══════════════════════════════════════════════════════════════════════
 
-		requestStoragePermission();
-	}, false);
+const MDNS_HOST    = 'agrisense.local';  // mDNS hostname (new firmware)
+const PING_PATH    = '/ping';            // lightweight identity probe
+const DATA_PATH    = '/data';            // sensor data endpoint
+const POLL_INTERVAL   = 2000;           // ms between dashboard updates
+const FETCH_TIMEOUT   = 2500;           // ms before giving up on a single fetch
+const PROBE_TIMEOUT   = 600;            // ms per IP during subnet scan
+const MAX_FAIL_STREAK = 3;              // consecutive errors before re-discovery
 
-	const LOCAL_ESP32_URL = "http://10.103.135.137/data"
-	const TAILSCALE_ESP32_URL = "https://laptop-2nbe1eab.tailc06477.ts.net:80/data";
+let espHost        = null;   // currently active host string (IP or hostname)
+let pollTimer      = null;
+let failStreak     = 0;
+let discovering    = false;
 
-	let ESP32_URL = LOCAL_ESP32_URL;
+// ── Persistence ────────────────────────────────────────────
+function getSavedHost() { return localStorage.getItem('espHost') || null; }
+function saveHost(h)    { if (h) localStorage.setItem('espHost', h); }
 
-	function tryFetchingFromTailscale() {
-		return fetch(TAILSCALE_ESP32_URL)
-			.then(response => {
-				if (response.ok) {
-						ESP32_URL = TAILSCALE_ESP32_URL;
-						return response.json();
-					}
-				})
-				.catch(error => {
-					ESP32_URL = LOCAL_ESP32_URL;
-					return fetch(LOCAL_ESP32_URL).then(response => {
-					return response.json();
-					});
-				});
-		}
-    var tempGauge = new JustGage({
-        id: "temperature-gauge",
-        value: 0,
-        min: -10,
-        max: 50,
-        title: "°C",
-        gaugeWidthScale: 0.6,
-        levelColors: ["blue", "yellow", "red"]
-    });
+// ── fetchWithTimeout ────────────────────────────────────────
+function fetchWithTimeout(url, ms) {
+    const ctrl  = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), ms);
+    return fetch(url, { signal: ctrl.signal, mode: 'cors' })
+           .finally(() => clearTimeout(timer));
+}
 
-    var humGauge = new JustGage({
-        id: "humidity-gauge",
-        value: 0,
-        min: 0,
-        max: 100,
-        title: "%",
-        gaugeWidthScale: 0.6,
-        levelColors: ["brown", "green"]
-    });
-	var soilMoistureGauge = new JustGage({
-		id: "soil-moisture-gauge",
-		value: 0,
-		min: 0,
-		max: 100,
-		title: "%",
-		gaugeWidthScale: 0.6,
-		levelColors: ["brown", "green"]
-	});
-	function updatePHMeter(pHValue) {
-		const pHPointer = document.getElementById('ph-pointer');
-		const pHValueElement = document.getElementById('ph-value');
-		pHValue = Math.min(Math.max(pHValue, 0), 14);
-		const scaleWidth = document.querySelector('.ph-scale').offsetWidth;
-		const pointerPosition = (pHValue / 14) * scaleWidth;
-		pHPointer.style.left = `${pointerPosition}px`;
-		pHValueElement.textContent = pHValue.toFixed(2);
-	}
+// ── Probe a single host for the /ping identity response ────
+async function probeHost(host) {
+    try {
+        const r = await fetchWithTimeout(`http://${host}${PING_PATH}`, PROBE_TIMEOUT);
+        if (!r.ok) return false;
+        const j = await r.json();
+        return j.device === 'agrisense';
+    } catch { return false; }
+}
 
-    // Set up the chart
-    const ctx = document.getElementById('sensor-plot').getContext('2d');
-    const sensorPlot = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Temperature (°C)',
-                data: [],
-                borderColor: 'rgba(255, 99, 132, 1)',
-                fill: false
-            }, {
-                label: 'Humidity (%)',
-                data: [],
-                borderColor: 'rgba(54, 162, 235, 1)',
-                fill: false
-            }, {
-                label: 'Water Level (%)',
-                data: [],
-                borderColor: 'rgba(27, 20, 100, 1)',
-                fill: false
-            }, {
-                label: 'Moisture Level (%)',
-                data: [],
-                borderColor: 'rgba(39, 174, 96, 1)',
-                fill: false
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true }
-            },
-            plugins: {
-                legend: { position: 'top' }
-            }
-        }
-    });
-        function updateEye(detectedObject) {
-
-            if (detectedObject) {
-                // If an object is detected (e.g., "cow", "goat")
-                eye.classList.add('detected'); // Turn red and vibrate
-                dialogBox.textContent = "Something Detected"; // Update dialog box
-
-                setTimeout(() => {
-                    eye.classList.remove('detected'); // Stop vibrating
-                    dialogBox.textContent = `A ${detectedObject} detected nearby`; // Update dialog box
-                    eye.classList.add('blink'); // Blink once
-
-                    setTimeout(() => {
-                        eye.classList.remove('blink'); // Reset to normal
-                        dialogBox.textContent = "Searching..."; // Reset dialog box
-                    }, 300); // Blink duration
-                }, 1000); // Vibrate duration
-            } else {
-                // If no object is detected
-                eye.classList.remove('detected', 'blink'); // Reset to normal
-                dialogBox.textContent = "Searching..."; // Reset dialog box
-            }
-        }
-    async function updateData() {
-		try {
-			// Fetch from the correct ESP32 URL (Tailscale or local)
-			const data = await tryFetchingFromTailscale();
-			console.log("Received data:", data);
-			if (data.detected_object) {
-                updateEye(data.detected_object); // Trigger eye animations
-            }
-            // Update Temperature & Humidity
-            document.getElementById('temperature-value').textContent = data.temperature;
-            document.getElementById('humidity-value').textContent = data.humidity;
-            tempGauge.refresh(data.temperature);
-            humGauge.refresh(data.humidity);
-			document.getElementById('soil-moisture-value').textContent = data.soilMoisture;
-			soilMoistureGauge.refresh(data.soilMoisture);
-
-			const waterLevel = Math.min(Math.max(data.waterLevel, 0), 100); // Ensure water level is between 0-100
-			document.getElementById('water-value').textContent = `${waterLevel}`;
-			document.getElementById('water-fill').style.height = `${waterLevel}%`;
-			const eye = document.querySelector('.eye');
-			eye.classList.remove('detected');
-			
-			const rainStatusElement = document.getElementById('rainStatus');
-			if (data.isRaining) {
-				rainStatusElement.textContent = "Rain Status: Raining 🌧️";
-				rainStatusElement.className = "status-line raining";
-			} else {
-				rainStatusElement.textContent = "Rain Status: Not Raining ☀️";
-				rainStatusElement.className = "status-line not-raining";
-			}
-
-			// Update Motor Mode
-			const motorModeElement = document.getElementById('motorModeStatus');
-			if (data.pumpStatus) {
-				motorModeElement.textContent = "Motor Mode: Auto 🤖";
-				motorModeElement.className = "status-line pump-on";
-			} else {
-				motorModeElement.textContent = "Motor Mode: Manual 👤";
-				motorModeElement.className = "status-line pump-off";
-			}
-            // Update Live Plot
-            const time = new Date().toLocaleTimeString();
-		
-            // Add new data points
-            sensorPlot.data.labels.push(time);
-            sensorPlot.data.datasets[0].data.push(data.temperature);
-            sensorPlot.data.datasets[1].data.push(data.humidity);
-            sensorPlot.data.datasets[2].data.push(waterLevel);
-			sensorPlot.data.datasets[3].data.push(data.soilMoisture);
-			
-            // Keep only the last 15 data points
-            if (sensorPlot.data.labels.length > 15) {
-                sensorPlot.data.labels.shift();
-                sensorPlot.data.datasets.forEach(dataset => dataset.data.shift());
-            }
-
-            // Update chart
-            sensorPlot.update('none');
-        } catch (error) {
-            console.error("Connection failed:", error);
-		}
+// ── Scan a /24 subnet in parallel batches of 40 ────────────
+async function scanSubnet(subnet) {
+    logDiscovery(`  Scanning ${subnet}.0/24 …`);
+    const BATCH = 40;
+    for (let base = 1; base <= 254; base += BATCH) {
+        const ips = [];
+        for (let i = base; i < base + BATCH && i <= 254; i++) ips.push(`${subnet}.${i}`);
+        const results = await Promise.all(
+            ips.map(ip => probeHost(ip).then(ok => ok ? ip : null))
+        );
+        const hit = results.find(r => r !== null);
+        if (hit) { logDiscovery(`  ✅ Found at ${hit}`); return hit; }
     }
-    
+    return null;
+}
 
-    setInterval(updateData, 40);
+// ── Full discovery sequence ─────────────────────────────────
+async function discoverESP32() {
+    if (discovering) return;
+    discovering = true;
+    setConnBar('discovering', '🔍 Searching for ESP32…', '');
+    openDiscoveryLog();
+    setBtnsDisabled(true);
+
+    // 1. mDNS hostname (works without knowing the IP)
+    logDiscovery('① Trying agrisense.local (mDNS)…');
+    if (await probeHost(MDNS_HOST)) {
+        logDiscovery('✅ Found via mDNS!');
+        return finishDiscovery(MDNS_HOST);
+    }
+
+    // 2. Last saved IP/hostname from localStorage
+    const saved = getSavedHost();
+    if (saved && saved !== MDNS_HOST) {
+        logDiscovery(`② Trying last known host: ${saved}…`);
+        if (await probeHost(saved)) {
+            logDiscovery('✅ Still reachable!');
+            return finishDiscovery(saved);
+        }
+
+        // 3. Same /24 subnet — ESP32 probably got a new DHCP lease
+        //    but is still on the same network
+        const parts = saved.split('.');
+        if (parts.length === 4) {
+            const subnet = parts.slice(0, 3).join('.');
+            logDiscovery(`③ Scanning last known subnet ${subnet}.0/24…`);
+            const hit = await scanSubnet(subnet);
+            if (hit) return finishDiscovery(hit);
+        }
+    }
+
+    // 4. Common subnets (covers most home/office routers)
+    logDiscovery('④ Trying common subnets…');
+    for (const subnet of ['192.168.0', '192.168.1', '192.168.4', '10.0.0', '10.0.1']) {
+        const hit = await scanSubnet(subnet);
+        if (hit) return finishDiscovery(hit);
+    }
+
+    // Nothing worked
+    logDiscovery('❌ Could not find ESP32 automatically.');
+    logDiscovery('   Enter the IP manually in the field above.');
+    setBtnsDisabled(false);
+    discovering = false;
+    setConnBar('failed', '❌ Not found — enter IP manually', '');
+    return null;
+}
+
+function finishDiscovery(host) {
+    discovering = false;
+    setBtnsDisabled(false);
+    espHost = host;
+    saveHost(host);
+    document.getElementById('esp-host-input').value = host;
+    failStreak = 0;
+    setConnBar('connected', '✅ Connected', host);
+    closeSettings();
+    startPolling();
+    return host;
+}
+
+// ── Manual connect from settings modal ─────────────────────
+async function manualConnect() {
+    const raw = document.getElementById('esp-host-input').value.trim();
+    if (!raw) { logDiscovery('⚠ Enter a hostname or IP first.'); openDiscoveryLog(); return; }
+
+    openDiscoveryLog();
+    logDiscovery(`Testing ${raw}…`);
+    setBtnsDisabled(true);
+
+    if (await probeHost(raw)) {
+        logDiscovery('✅ Connected!');
+        finishDiscovery(raw);
+    } else {
+        logDiscovery(`❌ Could not reach ${raw}.`);
+        logDiscovery('   Check the IP/hostname and make sure your phone');
+        logDiscovery('   is on the same WiFi as the ESP32.');
+        setBtnsDisabled(false);
+        setConnBar('failed', '❌ Not reachable', raw);
+    }
+}
+
+function startDiscovery() {
+    clearDiscoveryLog();
+    discoverESP32();
+}
+
+// ── Start/stop polling ──────────────────────────────────────
+function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
     updateData();
-	updatePHMeter(8);
+    pollTimer = setInterval(updateData, POLL_INTERVAL);
+}
 
-    // Logout Function
-    function logout() {
-        localStorage.removeItem("rememberMe");
-        localStorage.removeItem("loggedInUser");
+// ── Kick everything off on page load ───────────────────────
+window.addEventListener('load', function () {
+    const saved = getSavedHost();
+    if (saved) document.getElementById('esp-host-input').value = saved;
+    discoverESP32().then(host => {
+        if (!host) openSettings();   // nothing found → open modal for manual entry
+    });
+});
 
-        document.body.classList.add("fade-out");
+// ═══════════════════════════════════════════════════════════════════════
+// DATA FETCHING & DASHBOARD RENDERING
+// ═══════════════════════════════════════════════════════════════════════
 
+async function updateData() {
+    if (!espHost) return;
+    try {
+        const r = await fetchWithTimeout(`http://${espHost}${DATA_PATH}`, FETCH_TIMEOUT);
+        if (!r.ok) throw new Error('Bad response');
+        const data = await r.json();
+        failStreak = 0;
+        setConnBar('connected', '✅ Connected', espHost);
+        renderDashboard(data);
+    } catch (err) {
+        failStreak++;
+        console.warn(`Fetch failed (${failStreak}/${MAX_FAIL_STREAK}):`, err.message);
+        if (failStreak >= MAX_FAIL_STREAK) {
+            // Connection lost — try rediscovery automatically
+            setConnBar('lost', '📡 Connection lost — searching…', '');
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+            espHost = null;
+            discoverESP32().then(host => {
+                if (!host) openSettings();
+            });
+        }
+    }
+}
+
+function renderDashboard(data) {
+    // Gauges
+    tempGauge.refresh(data.temperature);
+    humGauge.refresh(data.humidity);
+    soilMoistureGauge.refresh(data.soilMoisture);
+
+    document.getElementById('temperature-value').textContent  = data.temperature;
+    document.getElementById('humidity-value').textContent     = data.humidity;
+    document.getElementById('soil-moisture-value').textContent = data.soilMoisture;
+
+    // Water level tank
+    const wl = Math.min(Math.max(data.waterLevel, 0), 100);
+    document.getElementById('water-value').textContent       = wl;
+    document.getElementById('water-fill').style.height       = wl + '%';
+
+    // pH
+    updatePHMeter(data.pH);
+
+    // Rain status
+    const rainEl = document.getElementById('rainStatus');
+    if (data.isRaining) {
+        rainEl.textContent = 'Rain Status: Raining 🌧️';
+        rainEl.className   = 'status-line raining';
+    } else {
+        rainEl.textContent = 'Rain Status: Not Raining ☀️';
+        rainEl.className   = 'status-line not-raining';
+    }
+
+    // Pump status
+    const pumpEl = document.getElementById('motorModeStatus');
+    if (data.pumpStatus) {
+        pumpEl.textContent = 'Motor Mode: Auto 🤖';
+        pumpEl.className   = 'status-line pump-on';
+    } else {
+        pumpEl.textContent = 'Motor Mode: Manual 👤';
+        pumpEl.className   = 'status-line pump-off';
+    }
+
+    // Live chart
+    const time = new Date().toLocaleTimeString();
+    sensorPlot.data.labels.push(time);
+    sensorPlot.data.datasets[0].data.push(data.temperature);
+    sensorPlot.data.datasets[1].data.push(data.humidity);
+    sensorPlot.data.datasets[2].data.push(wl);
+    sensorPlot.data.datasets[3].data.push(data.soilMoisture);
+    if (sensorPlot.data.labels.length > 15) {
+        sensorPlot.data.labels.shift();
+        sensorPlot.data.datasets.forEach(d => d.data.shift());
+    }
+    sensorPlot.update('none');
+
+    // Eye animation
+    if (data.detected_object) updateEye(data.detected_object);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+
+function setConnBar(state, text, host) {
+    const bar = document.getElementById('conn-bar');
+    bar.className = state;
+    document.getElementById('conn-bar-text').textContent = text;
+    document.getElementById('conn-bar-host').textContent = host ? `(${host})` : '';
+}
+
+function logDiscovery(msg) {
+    const log = document.getElementById('discovery-log');
+    log.textContent += msg + '\n';
+    log.scrollTop = log.scrollHeight;
+}
+function clearDiscoveryLog() { document.getElementById('discovery-log').textContent = ''; }
+function openDiscoveryLog()  { document.getElementById('discovery-log').classList.add('open'); }
+
+function setBtnsDisabled(dis) {
+    document.getElementById('btn-connect').disabled  = dis;
+    document.getElementById('btn-discover').disabled = dis;
+    document.getElementById('btn-modal-close').disabled = dis;
+}
+
+function openSettings() {
+    document.getElementById('settings-backdrop').classList.add('open');
+}
+function closeSettings() {
+    if (espHost) document.getElementById('settings-backdrop').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// GAUGES & CHART SETUP
+// ═══════════════════════════════════════════════════════════════════════
+
+var tempGauge = new JustGage({
+    id: 'temperature-gauge', value: 0, min: -10, max: 50,
+    title: '°C', gaugeWidthScale: 0.6,
+    levelColors: ['blue', 'yellow', 'red']
+});
+var humGauge = new JustGage({
+    id: 'humidity-gauge', value: 0, min: 0, max: 100,
+    title: '%', gaugeWidthScale: 0.6,
+    levelColors: ['brown', 'green']
+});
+var soilMoistureGauge = new JustGage({
+    id: 'soil-moisture-gauge', value: 0, min: 0, max: 100,
+    title: '%', gaugeWidthScale: 0.6,
+    levelColors: ['brown', 'green']
+});
+
+function updatePHMeter(pHValue) {
+    pHValue = Math.min(Math.max(pHValue, 0), 14);
+    const scaleWidth = document.querySelector('.ph-scale').offsetWidth;
+    document.getElementById('ph-pointer').style.left = `${(pHValue / 14) * scaleWidth}px`;
+    document.getElementById('ph-value').textContent  = pHValue.toFixed(2);
+}
+
+const ctx = document.getElementById('sensor-plot').getContext('2d');
+const sensorPlot = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [
+            { label: 'Temperature (°C)',   data: [], borderColor: 'rgba(255,99,132,1)',   fill: false },
+            { label: 'Humidity (%)',        data: [], borderColor: 'rgba(54,162,235,1)',   fill: false },
+            { label: 'Water Level (%)',     data: [], borderColor: 'rgba(27,20,100,1)',    fill: false },
+            { label: 'Moisture Level (%)',  data: [], borderColor: 'rgba(39,174,96,1)',    fill: false }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true } },
+        plugins: { legend: { position: 'top' } }
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// EYE ANIMATION
+// ═══════════════════════════════════════════════════════════════════════
+
+const eye       = document.querySelector('.eye');
+const dialogBox = document.getElementById('dialog-box');
+
+function updateEye(detectedObject) {
+    if (detectedObject) {
+        eye.classList.add('detected');
+        dialogBox.textContent = 'Something Detected';
         setTimeout(() => {
-            window.location.href = "login.html";
-        }, 500); 
+            eye.classList.remove('detected');
+            dialogBox.textContent = `A ${detectedObject} detected nearby`;
+            eye.classList.add('blink');
+            setTimeout(() => {
+                eye.classList.remove('blink');
+                dialogBox.textContent = 'Searching…';
+            }, 300);
+        }, 1000);
+    } else {
+        eye.classList.remove('detected', 'blink');
+        dialogBox.textContent = 'Searching…';
     }
+}
 
-	function showContainer(containerId) {
-		document.querySelectorAll('.sensor-box').forEach(container => {
-			container.classList.add('hidden');
-			container.classList.remove('centered');
-			container.style.transform = ''; 
-		});
+// ═══════════════════════════════════════════════════════════════════════
+// MENU, CONTAINERS, CSV
+// ═══════════════════════════════════════════════════════════════════════
 
-		const selectedContainer = document.getElementById(containerId);
-		if (selectedContainer) {
-			const rect = selectedContainer.getBoundingClientRect();
-			const offsetX = window.innerWidth / 2 - rect.width / 2 - rect.left;
-			const offsetY = window.innerHeight / 2 - rect.height / 2 - rect.top;
-
-			selectedContainer.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-			selectedContainer.classList.remove('hidden');
-			selectedContainer.classList.add('centered');
-
-			document.body.classList.add('no-scroll');
-		}
-	}
-
-	function showAllContainers() {
-		document.querySelectorAll('.sensor-box').forEach(container => {
-			container.classList.remove('hidden');
-			container.classList.remove('centered');
-			container.style.transform = '';
-			container.classList.add('fade-in'); 
-		});
-
-		setTimeout(() => {
-			document.querySelectorAll('.sensor-box').forEach(container => {
-				container.classList.remove('fade-in');
-			});
-		}, 500); 
-
-		document.body.classList.remove('no-scroll');
-	}
-	window.addEventListener('resize', () => {
-    if (window.innerWidth > 768) {
-        document.body.classList.remove('no-scroll');
-        showAllContainers();
+function showContainer(id) {
+    document.querySelectorAll('.sensor-box').forEach(b => {
+        b.classList.add('hidden'); b.classList.remove('centered'); b.style.transform = '';
+    });
+    const sel = document.getElementById(id);
+    if (sel) {
+        const r = sel.getBoundingClientRect();
+        sel.style.transform = `translate(${window.innerWidth/2 - r.width/2 - r.left}px,${window.innerHeight/2 - r.height/2 - r.top}px)`;
+        sel.classList.remove('hidden'); sel.classList.add('centered');
+        document.body.classList.add('no-scroll');
     }
-	});
-	document.addEventListener('DOMContentLoaded', function() {
-		const dropdownButton = document.querySelector('.dropdown-button');
-		const dropdownContent = document.querySelector('.dropdown-content');
-		dropdownButton.addEventListener('click', function(event) {
-			event.stopPropagation(); 
+}
+function showAllContainers() {
+    document.querySelectorAll('.sensor-box').forEach(b => {
+        b.classList.remove('hidden', 'centered'); b.style.transform = ''; b.classList.add('fade-in');
+    });
+    setTimeout(() => document.querySelectorAll('.sensor-box').forEach(b => b.classList.remove('fade-in')), 500);
+    document.body.classList.remove('no-scroll');
+}
+window.addEventListener('resize', () => { if (window.innerWidth > 768) { document.body.classList.remove('no-scroll'); showAllContainers(); } });
 
-			if (dropdownContent.style.display === 'block') {
-				dropdownContent.classList.add('slide-out');
-				setTimeout(() => {
-					dropdownContent.style.display = 'none';
-					dropdownContent.classList.remove('slide-out');
-				}, 300);
-			} else {
-				dropdownContent.style.display = 'block';
-			}
-		});
+function logout() {
+    localStorage.removeItem('rememberMe');
+    localStorage.removeItem('loggedInUser');
+    document.body.classList.add('fade-out');
+    setTimeout(() => { window.location.href = 'login.html'; }, 500);
+}
 
-		document.addEventListener('click', function(event) {
-			if (!dropdownButton.contains(event.target) && !dropdownContent.contains(event.target)) {
-				dropdownContent.classList.add('slide-out');
-				setTimeout(() => {
-					dropdownContent.style.display = 'none';
-					dropdownContent.classList.remove('slide-out');
-				}, 300);
-			}
-		});
-		dropdownContent.querySelectorAll('a').forEach(link => {
-			link.addEventListener('click', function() {
-				dropdownContent.classList.add('slide-out');
-				setTimeout(() => {
-					dropdownContent.style.display = 'none';
-					dropdownContent.classList.remove('slide-out');
-				}, 300);
-			});
-		});
-	});
+// Dropdown
+document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.querySelector('.dropdown-button');
+    const content = document.querySelector('.dropdown-content');
+    btn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (content.style.display === 'block') {
+            content.classList.add('slide-out');
+            setTimeout(() => { content.style.display = 'none'; content.classList.remove('slide-out'); }, 300);
+        } else { content.style.display = 'block'; }
+    });
+    document.addEventListener('click', e => {
+        if (!btn.contains(e.target) && !content.contains(e.target)) {
+            content.classList.add('slide-out');
+            setTimeout(() => { content.style.display = 'none'; content.classList.remove('slide-out'); }, 300);
+        }
+    });
+    content.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+        content.classList.add('slide-out');
+        setTimeout(() => { content.style.display = 'none'; content.classList.remove('slide-out'); }, 300);
+    }));
+});
 
-	let hourlyData = [];
+// Hourly CSV
+let hourlyData = [];
+setInterval(() => {
+    hourlyData.push({
+        time:         new Date().toLocaleTimeString(),
+        temperature:  document.getElementById('temperature-value').textContent,
+        humidity:     document.getElementById('humidity-value').textContent,
+        waterLevel:   document.getElementById('water-value').textContent,
+        soilMoisture: document.getElementById('soil-moisture-value').textContent,
+        pH:           document.getElementById('ph-value').textContent
+    });
+}, 60000);
 
-	// Function to collect data every minute
-	function collectData() {
-		const data = {
-			time: new Date().toLocaleTimeString(),
-			temperature: document.getElementById('temperature-value').textContent,
-			humidity: document.getElementById('humidity-value').textContent,
-			waterLevel: document.getElementById('water-value').textContent,
-			soilMoisture: document.getElementById('soil-moisture-value').textContent,
-			pH: document.getElementById('ph-value').textContent
-		};
-		hourlyData.push(data);
-	}
+function generateCSV() {
+    if (hourlyData.length === 0) { alert('No data collected yet (data is recorded every 1 minute).'); return; }
+    const csv = 'Time,Temperature (°C),Humidity (%),Water Level (%),Soil Moisture (%),pH\n' +
+        hourlyData.map(d => `${d.time},${d.temperature},${d.humidity},${d.waterLevel},${d.soilMoisture},${d.pH}`).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    window.resolveLocalFileSystemURL(cordova.file.externalRootDirectory, dir =>
+        dir.getDirectory('Download', { create: true }, sub =>
+            sub.getFile('hourly_sensor_data.csv', { create: true, exclusive: false }, fe =>
+                fe.createWriter(fw => {
+                    fw.write(blob);
+                    alert('✅ CSV saved to Downloads!');
+                    hourlyData = [];
+                }, e => alert('Write error: ' + e)),
+            e => alert('Folder error: ' + e)),
+        e => alert('FS error: ' + e));
+}
 
-	// Start collecting data every minute
-	setInterval(collectData, 60000); // 60000 milliseconds = 1 minute
+// ═══════════════════════════════════════════════════════════════════════
+// CORDOVA PERMISSIONS
+// ═══════════════════════════════════════════════════════════════════════
 
-
-	function generateCSV() {
-		if (hourlyData.length === 0) {
-			alert("No data available to download.");
-			return;
-		}
-
-		// Convert data to CSV format
-		const csvContent = "Time,Temperature (°C),Humidity (%),Water Level (%),Soil Moisture (%),pH, Rain Status, Motor Status\n" +
-			hourlyData.map(data =>
-				`${data.time},${data.temperature},${data.humidity},${data.waterLevel},${data.soilMoisture},${data.pH},${data.isRaining},${data.pumpStatus}`
-			).join("\n");
-
-		// Convert to Blob
-		const blob = new Blob([csvContent], { type: "text/csv" });
-
-		// Get access to the file system
-		window.resolveLocalFileSystemURL(cordova.file.externalRootDirectory, function (dirEntry) {
-			dirEntry.getDirectory("Download", { create: true }, function (subDirEntry) {
-				subDirEntry.getFile("hourly_sensor_data.csv", { create: true, exclusive: false }, function (fileEntry) {
-					fileEntry.createWriter(function (fileWriter) {
-						fileWriter.write(blob);
-						alert("CSV file saved in Downloads folder! ✅");
-					}, function (error) {
-						alert("Error writing file: " + error);
-					});
-				}, function (error) {
-					alert("Error getting file: " + error);
-				});
-			}, function (error) {
-				alert("Error accessing Download folder: " + error);
-			});
-		}, function (error) {
-			alert("Error accessing file system: " + error);
-		});
-
-		// Clear data after saving
-		hourlyData = [];
-	}
-
-	function readCSVFile() {
-		var filePath = cordova.file.externalRootDirectory + "/storage/emulated/0/Download/hourly_sensor_data.csv"; // Change the path as needed
-
-		window.resolveLocalFileSystemURL(filePath, function(fileEntry) {
-			fileEntry.file(function(file) {
-				var reader = new FileReader();
-				reader.onloadend = function() {
-					console.log("File Content: " + this.result); // Output CSV content
-				};
-				reader.readAsText(file);
-			}, onError);
-		}, onError);
-	}
-
-	function onError(error) {
-			console.error("File error:", error);
-		}
-	function saveCSVFile(content) {
-		window.resolveLocalFileSystemURL(cordova.file.externalRootDirectory, function(dirEntry) {
-			dirEntry.getFile("Download/test.csv", { create: true, exclusive: false }, function(fileEntry) {
-				fileEntry.createWriter(function(fileWriter) {
-					fileWriter.write(content);
-					alert("✅ File saved successfully in Downloads!");
-				}, onError);
-			}, onError);
-		}, onError);
-	}
-	function onError(error) {
-		alert("❌ Error: " + error.code);
-	}
-
-
-    </script>
+document.addEventListener('deviceready', function () {
+    var permissions = cordova.plugins.permissions;
+    function req() {
+        if (typeof device !== 'undefined' && device.platform === 'Android' && parseInt(device.version) >= 11) {
+            permissions.requestPermission(permissions.MANAGE_EXTERNAL_STORAGE,
+                s => { if (!s.hasPermission) alert('❌ Full storage access denied — CSV export may fail.'); },
+                e => console.error('Permission error:', e));
+        } else {
+            permissions.requestPermissions(
+                [permissions.READ_EXTERNAL_STORAGE, permissions.WRITE_EXTERNAL_STORAGE],
+                () => {}, e => console.error('Permission error:', e));
+        }
+    }
+    req();
+}, false);
+</script>
 </body>
 </html>
