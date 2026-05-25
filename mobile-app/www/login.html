@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap");
+    :root {
+      --white-color: hsl(0,0%,100%);
+      --black-color: hsl(0, 0% , 0%);
+      --body-font: "Poppins", sans-serif;
+      --h1-font-size: 1.75rem;
+      --normal-font-size: 1rem;
+      --small-font-size: .813rem;
+      --font-medium: 500;
+    }
+
+    * {
+      box-sizing: border-box;
+      padding: 0;
+      margin: 0;
+    }
+
+    body,
+    input,
+    button {
+      font-size: var(--normal-font-size);
+      font-family: var(--body-font);
+    }
+
+    body {
+      color: var(--white-color);
+      opacity: 0; /* Start with opacity 0 for fade-in */
+      animation: fadeIn 0.5s ease-out forwards; /* Fade-in animation */
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    body.fade-out {
+      opacity: 0;
+      transition: opacity 0.5s ease-out;
+    }
+
+    /* White overlay for fade-out animation */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: white;
+      opacity: 0; /* Start fully transparent */
+      pointer-events: none; /* Allow clicks to pass through */
+      transition: opacity 0.5s ease-out; /* Smooth fade-out transition */
+      z-index: 1; /* Place below the splash image */
+    }
+
+    body.fade-out .overlay {
+      opacity: 1; /* Fully visible white overlay */
+    }
+
+    /* Splash image container */
+    .splash-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0; /* Start fully transparent */
+      pointer-events: none; /* Allow clicks to pass through */
+      transition: opacity 0.5s ease-out; /* Smooth fade-out transition */
+      z-index: 2; /* Place above the white overlay */
+    }
+
+    body.fade-out .splash-container {
+      opacity: 1; /* Fully visible splash image */
+    }
+
+    /* Splash image */
+    .splash {
+      max-width: 80%; /* Adjust size as needed */
+      max-height: 80%; /* Adjust size as needed */
+      width: auto;
+      height: auto;
+      object-fit: contain; /* Ensure the image fits within the container */
+    }
+
+    input,
+    button {
+      border: none;
+      outline: none;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .login {
+      position: relative;
+      height: 100vh;
+      display: grid;
+      align-items: center;
+    }
+
+    .login__img {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .login__form {
+      position: relative;
+      background-color: hsla(0, 0%, 10%, 0.1);
+      border: 2px solid var(--white-color);
+      margin-inline: 1.5rem;
+      padding: 2.5rem 1.5rem;
+      border-radius: 1rem;
+      backdrop-filter: blur(8px);
+    }
+
+    .login__title {
+      text-align: center;
+      font-size: var(--h1-font-size);
+      font-weight: var(--font-medium);
+      margin-bottom: 2rem;
+    }
+
+    .login__content,
+    .login__box {
+      display: grid;
+    }
+
+    .login__content {
+      row-gap: 1.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .login__box {
+      grid-template-columns: max-content 1fr;
+      align-items: center;
+      column-gap: 0.75rem;
+      border-bottom: 2px solid var(--white-color);
+    }
+
+    .login__icon,
+    .login__eye {
+      font-size: 1.25rem;
+    }
+
+    .login__input {
+      width: 100%;
+      padding-block: 0.8rem;
+      background: none;
+      color: var(--white-color);
+      position: relative;
+      z-index: 1;
+    }
+
+    .login__box-input {
+      position: relative;
+    }
+
+    .login__label {
+      position: absolute;
+      left: 0;
+      top: 13px;
+      font-weight: var(--font-medium);
+      transition: top 0.3s, font-size 0.3s;
+    }
+
+    .login__eye {
+      position: absolute;
+      right: 0;
+      top: 18px;
+      z-index: 10;
+      cursor: pointer;
+    }
+
+    .login__box:nth-child(2) input {
+      padding-right: 1.8rem;
+    }
+
+    .login__check,
+    .login__check-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .login__check {
+      margin-bottom: 1.5rem;
+    }
+
+    .login__check-label,
+    .login__forgot,
+    .login__register {
+      font-size: var(--small-font-size);
+    }
+
+    .login__check-group {
+      column-gap: 0.5rem;
+    }
+
+    .login__check-input {
+      width: 16px;
+      height: 16px;
+    }
+
+    .login__forgot {
+      color: var(--white-color);
+    }
+
+    .login__forgot:hover {
+      text-decoration: underline;
+    }
+
+    .login__button {
+      width: 100%;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      background-color: var(--white-color);
+      font-weight: var(--font-medium);
+      cursor: pointer;
+      margin-bottom: 2rem;
+    }
+
+    .login__register {
+      text-align: center;
+    }
+
+    .login__register a {
+      color: var(--white-color);
+      font-weight: var(--font-medium);
+    }
+
+    .login__register a:hover {
+      text-decoration: underline;
+    }
+
+    .login__input:focus + .login__label {
+      top: -12px;
+      font-size: var(--small-font-size);
+    }
+
+    .login__input:not(:placeholder-shown).login__input:not(:focus) + .login__label {
+      top: -12px;
+      font-size: var(--small-font-size);
+    }
+
+    .error-box {
+      display: none;
+      position: absolute;
+      bottom: -50px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: red;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      width: 90%;
+      text-align: center;
+      font-size: 14px;
+      animation: slideUp 0.5s ease-out forwards; 
+    }
+
+    @keyframes slideUp {
+      from { bottom: -70px; opacity: 0; }
+      to { bottom:-50px; opacity: 1; } 
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    /* for medium devices */
+    @media screen and (min-width: 576px) {
+      .login {
+        justify-content: center;
+      }
+
+      .login__form {
+        width: 432px;
+        padding: 4rem 3rem 3.5rem;
+        border-radius: 1.5rem;
+      }
+
+      .login__title {
+        font-size: 2rem;
+      }
+    }
+  </style>
+
+</head>
+<body>
+  <!-- White overlay for fade-out animation -->
+  <div class="overlay"></div>
+
+  <!-- Splash image container -->
+  <div class="splash-container">
+    <img src="splash.png" alt="Splash Image" class="splash">
+  </div>
+
+  <div class="login">
+    <img src="groot2.jpg" alt="login image" class="login__img">
+
+    <form action="" class="login__form" onsubmit="loginUser(); return false;">
+      <h1 class="login__title">Login</h1>
+
+      <div class="login__content">
+        <div class="login__box">
+          <i class="bx bx-lock-alt"></i>
+          <div class="login__box-input">
+            <input type="email" id="username" required class="login__input" placeholder="">
+            <label for="username" class="login__label">Email</label>
+          </div>
+        </div>
+
+        <div class="login__box">
+          <i class="ri-lock-2-line login__icon"></i>
+          <div class="login__box-input">
+            <input type="password" id="password" required class="login__input" placeholder="">
+            <label for="password" class="login__label">Password</label>
+            <i class="ri-eye-off-line login__eye" id="login-eye" onclick="showHiddenPass('password', 'login-eye')"></i>
+          </div>
+        </div>
+      </div>
+		<!-- Add "Remember Me" checkbox -->
+		<div class="login__check">
+		  <div class="login__check-group">
+			<input type="checkbox" id="rememberMe" class="login__check-input">
+			<label for="rememberMe" class="login__check-label">Remember Me</label>
+		  </div>
+		</div>
+      <div class="error-box" id="errorBox">Invalid Username or Password!</div>
+
+      <button type="submit" class="login__button">Login</button>
+
+      <p class="login__register">
+        Don't have an account? <a href="index.html" id="registerLink">Register</a>
+      </p>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById("registerLink").addEventListener("click", function (event) {
+      event.preventDefault();
+      document.body.classList.add("fade-out"); 
+      setTimeout(() => {
+        window.location.href = "index.html";
+      }, 500);
+    });
+	
+	// Auto-Redirect if Already Logged In
+	if (localStorage.getItem("rememberMe") === "true" && localStorage.getItem("loggedInUser")) {
+	  document.body.style.opacity = 0; // Start fade-out immediately
+	  setTimeout(() => {
+		window.location.href = "ESP.html"; // Redirect to ESP.html if logged in
+	  }, 500); // Match the duration of the fade-out transition
+	}
+
+	function loginUser() {
+	  let username = document.getElementById("username").value;
+	  let password = document.getElementById("password").value;
+	  let rememberMe = document.getElementById("rememberMe").checked; // Check if "Remember Me" is checked
+	  let errorBox = document.getElementById("errorBox");
+
+	  if (localStorage.getItem(username) === password) {
+		// Save login state if "Remember Me" is checked
+		if (rememberMe) {
+		  localStorage.setItem("rememberMe", "true"); // Save "Remember Me" state
+		  localStorage.setItem("loggedInUser", username); // Save the logged-in user
+		} else {
+		  sessionStorage.setItem("loggedInUser", username); // Use sessionStorage for temporary login
+		}
+
+		// Redirect to ESP.html after successful login
+		document.body.classList.add("fade-out"); // Add fade-out class
+		setTimeout(() => {
+		  window.location.href = "ESP.html";
+		}, 500); // Match the duration of the fade-out transition
+	  } else {
+		// Show error message
+		errorBox.style.display = "block";
+		errorBox.style.animation = "slideUp 0.5s ease-out forwards";
+		setTimeout(() => {
+		  errorBox.style.animation = "fadeOut 0.5s ease-out forwards";
+		  setTimeout(() => {
+			errorBox.style.display = "none"; 
+		  }, 500); 
+		}, 2000); 
+	  }
+	}
+    function showHiddenPass(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("ri-eye-off-line");
+        icon.classList.add("ri-eye-line");
+      } else {
+        input.type = "password";
+        icon.classList.remove("ri-eye-line");
+        icon.classList.add("ri-eye-off-line");
+      }
+    }
+  </script>
+</body>
+</html>

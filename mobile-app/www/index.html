@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/x-icon" href="iconreg.png" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Ensure full height and prevent overflow */
+        html, body {
+            height: 100%;
+            overflow: hidden;  /* Prevent unwanted scrolling */
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            position: relative; /* Required for overlay positioning */
+            opacity: 0; /* Start with opacity 0 for fade-in */
+            animation: fadeIn 0.5s ease-out forwards; /* Fade-in animation */
+        }
+
+        /* Background image container */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url(groot.jpg);
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: -1; /* Place behind the content */
+            opacity: 0; /* Start fully transparent */
+            animation: fadeInBackground 0.5s ease-out forwards; /* Fade-in animation for background */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInBackground {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* White overlay for fade-out animation */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            opacity: 0; /* Start fully transparent */
+            pointer-events: none; /* Allow clicks to pass through */
+            transition: opacity 0.5s ease-out; /* Smooth fade-out transition */
+            z-index: 1; /* Place below the splash image */
+        }
+
+        body.fade-out .overlay {
+            opacity: 1; /* Fully visible white overlay */
+        }
+		/* Splash image container */
+		.splash-container {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			padding-left:100px;
+			display: flex;
+			align-items: center; /* Center vertically */
+			justify-content: center; /* Center horizontally */
+			opacity: 0; /* Start fully transparent */
+			pointer-events: none; /* Allow clicks to pass through */
+			transition: opacity 0.5s ease-out; /* Smooth fade-out transition */
+			z-index: 2; /* Place above the white overlay */
+		}
+
+
+
+        body.fade-out .splash-container {
+            opacity: 1; /* Fully visible splash image */
+        }
+
+		/* Splash image */
+		.splash {
+			max-width: 80%; /* Adjust size as needed */
+			max-height: 80%; /* Adjust size as needed */
+			width: auto;
+			height: auto;
+			object-fit: contain; /* Ensure the image fits within the container */
+			filter: none; /* Remove any shadow effect */
+			margin: 0; /* Reset margin to avoid any offset */
+		}
+        /* Fade out all content inside the body */
+        body.fade-out .wrapper,
+        body.fade-out .container,
+        body.fade-out img:not(.splash) {
+            opacity: 0; /* Fade out all content except the splash image */
+            transition: opacity 0.5s ease-out; /* Smooth fade-out transition */
+        }
+
+        .wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: row;
+            opacity: 1; /* Start fully visible */
+            transition: opacity 0.5s ease-out; /* Smooth fade-out transition */
+        }
+
+        img {
+            width: 35%;
+            padding-right: 200px;
+            filter: drop-shadow(10px 10px 3px rgba(0, 0, 0, 0.8)); /* Shadow for other images */
+            transition: all 0.3s ease-in-out;
+            opacity: 1; /* Start fully visible */
+            transition: opacity 0.5s ease-out; /* Smooth fade-out transition */
+        }
+
+        .container {
+            background: transparent;
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid white;
+            text-align: center;
+            width: 350px;
+            position: relative;
+            backdrop-filter: blur(15px);
+            transition: height 0.3s ease-in-out, opacity 0.5s ease-out; /* Add transition for height and opacity */
+            overflow: hidden; /* Prevent content from overflowing */
+            opacity: 1; /* Start fully visible */
+        }
+
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.3s;
+        }
+
+        .btn:disabled {
+            background: gray;
+            cursor: not-allowed;
+        }
+
+        .error-box {
+            display: none;
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: red;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .password-rules {
+            max-height: 0;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            text-align: left;
+            padding: 0 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-top: 5px;
+            transition: max-height 0.3s ease-in-out, padding 0.3s ease-in-out; 
+        }
+
+        .password-rules.show {
+            max-height: 200px; /* Adjust based on content height */
+            padding: 10px; /* Add padding when visible */
+        }
+
+        .password-rules span {
+            display: block;
+            padding: 3px 0;
+        }
+
+        .valid {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        @media screen and (max-width: 959px) {
+            .wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            img {
+                width: 300px;
+                padding: 0;
+                margin-bottom: 40px;
+            }
+
+            .container {
+                margin-top: -10px;
+                width: 270px;
+            }
+			.splash-container{
+				padding-left: 0px;
+			}
+        }
+
+        a:link {
+            color: green;
+            background-color: transparent;
+            text-decoration: none;
+        }
+
+        a:visited {
+            color: pink;
+            background-color: transparent;
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: red;
+            background-color: transparent;
+            text-decoration: underline;
+        }
+
+        a:active {
+            color: yellow;
+            background-color: transparent;
+            text-decoration: underline;
+        }
+    </style>
+	
+</head>
+<body>
+    <!-- White overlay for fade-out animation -->
+    <div class="overlay"></div>
+
+    <!-- Splash image container -->
+    <div class="splash-container">
+        <img src="splash.png" alt="Splash Image" class="splash">
+    </div>
+
+    <div class="wrapper">
+        <img src="wlc.png" alt="WELCOME">
+        <div class="container">
+            <h2>Register</h2>
+            <input type="email" id="EMAIL" placeholder="Email" required><br>
+            <input type="password" id="password" placeholder="Password" required onfocus="showRules()" oninput="validatePassword()" onblur="hideRules()"><br>
+            
+            <div class="password-rules" id="passwordRules">
+                <span id="length">❌ At least 8 characters</span>
+                <span id="uppercase">❌ At least one uppercase letter</span>
+                <span id="lowercase">❌ At least one lowercase letter</span>
+                <span id="number">❌ At least one number</span>
+                <span id="special">❌ At least one special character (@, $, !, %, etc.)</span>
+            </div>
+
+            <button class="btn" id="registerBtn" onclick="registerUser()" disabled>Register</button>
+            <p>Already have an account? <a class="log" href="login.html" id="loginLink">Login</a></p>
+            <div class="error-box" id="errorBox">Invalid Email or Password!</div>
+        </div>
+    </div>
+
+    <script>
+        // Smooth transition to login.html
+        document.getElementById("loginLink").addEventListener("click", function (event) {
+            event.preventDefault(); // Prevent the default link behavior
+
+            // Clear "Remember Me" and "loggedInUser" state
+            localStorage.removeItem("rememberMe");
+            localStorage.removeItem("loggedInUser");
+
+            // Add fade-out class to body
+            document.body.classList.add("fade-out");
+
+            // Redirect to login.html after the fade-out animation completes
+            setTimeout(() => {
+                window.location.href = "login.html";
+            }, 500); // Match the duration of the fade-out transition
+        });
+		
+        function showRules() {
+            let rules = document.getElementById("passwordRules");
+            rules.classList.add("show"); // Add the "show" class to expand the rules box
+        }
+
+        function hideRules() {
+            let password = document.getElementById("password").value;
+            let rules = document.getElementById("passwordRules");
+            let allValid = document.querySelectorAll(".password-rules .valid").length === 5;
+
+            if (allValid || password === "") {
+                rules.classList.remove("show"); // Remove the "show" class to collapse the rules box
+            }
+        }
+
+        function validatePassword() {
+            let password = document.getElementById("password").value;
+            let length = document.getElementById("length");
+            let uppercase = document.getElementById("uppercase");
+            let lowercase = document.getElementById("lowercase");
+            let number = document.getElementById("number");
+            let special = document.getElementById("special");
+            let registerBtn = document.getElementById("registerBtn");
+
+            let lengthValid = password.length >= 8;
+            let uppercaseValid = /[A-Z]/.test(password);
+            let lowercaseValid = /[a-z]/.test(password);
+            let numberValid = /[0-9]/.test(password);
+            let specialValid = /[@$!%*?&]/.test(password);
+
+            length.innerHTML = lengthValid ? "✅ At least 8 characters" : "❌ At least 8 characters";
+            uppercase.innerHTML = uppercaseValid ? "✅ At least one uppercase letter" : "❌ At least one uppercase letter";
+            lowercase.innerHTML = lowercaseValid ? "✅ At least one lowercase letter" : "❌ At least one lowercase letter";
+            number.innerHTML = numberValid ? "✅ At least one number" : "❌ At least one number";
+            special.innerHTML = specialValid ? "✅ At least one special character (@, $, !, %, etc.)" : "❌ At least one special character (@, $, !, %, etc.)";
+
+            length.classList.toggle("valid", lengthValid);
+            uppercase.classList.toggle("valid", uppercaseValid);
+            lowercase.classList.toggle("valid", lowercaseValid);
+            number.classList.toggle("valid", numberValid);
+            special.classList.toggle("valid", specialValid);
+
+            registerBtn.disabled = !(lengthValid && uppercaseValid && lowercaseValid && numberValid && specialValid);
+        }
+
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+
+        function registerUser() {
+            let EMAIL = document.getElementById("EMAIL").value;
+            let password = document.getElementById("password").value;
+            let errorBox = document.getElementById("errorBox");
+
+            if (!EMAIL || password.length < 8) {
+                errorBox.style.display = "block";
+                setTimeout(() => { errorBox.style.display = "none"; }, 3000);
+                return;
+            }
+
+            // Clear previous login state
+            localStorage.removeItem("rememberMe");
+            localStorage.removeItem("loggedInUser");
+
+            // Save registration data in localStorage
+            localStorage.setItem(EMAIL, password);
+            localStorage.setItem('registered', 'true');  // Set registered flag
+
+            // Fade out the screen before redirecting
+            document.body.classList.add("fade-out");
+            setTimeout(() => {
+                window.location.href = "login.html";  // Redirect to login page
+            }, 500); // Match the duration of the fade-out transition
+        }
+
+    </script>
+</body>
+</html>

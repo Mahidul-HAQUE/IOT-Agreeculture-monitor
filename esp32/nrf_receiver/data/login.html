@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/x-icon" href="/iconlog-image" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #273c75, #40739e);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: row;
+        }
+
+        img {
+            width: 62%;
+            padding-right: 200px;
+            filter: drop-shadow(5px 5px 3px rgba(0, 0, 0, 0.8));
+            transition: all 0.3s ease-in-out;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            width: 400px;
+            position: relative;
+            backdrop-filter: blur(15px);
+        }
+
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .btn {
+            background: #764ba2;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .error-box {
+            display: none;
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: red;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { bottom: -70px; opacity: 0; }
+            to { bottom: -50px; opacity: 1; }
+        }
+
+        /* 🔹 RESPONSIVE DESIGN 🔹 */
+        @media screen and (max-width: 959px) {
+            .wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            img {
+                width: 290px;
+                padding: 0;
+                margin-bottom: 35px;
+            }
+
+            .container {
+                margin-top: -10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wrapper">
+        <img src="/login-image" alt="Welcome back">
+        <div class="container">
+            <h2>Login</h2>
+            <input type="text" id="username" placeholder="Username" required><br>
+            <input type="password" id="password" placeholder="Password" required><br>
+            <button class="btn" onclick="loginUser()">Login</button>
+            <div class="error-box" id="errorBox">Invalid Username or Password!</div>
+        </div>
+    </div>
+
+    <script>
+        var i = 0;
+        var increasing = true; // Track the direction of change
+
+        setInterval(() => {
+            document.body.style.background = `linear-gradient(135deg, #fed330 0%, #2bcbba ${i}%, darkorchid 100%)`;
+            document.body.style.backgroundRepeat = "no-repeat";
+
+            if (increasing) {
+                i++;
+                if (i >= 100) increasing = false;
+            } else {
+                i--;
+                if (i <= 0) increasing = true;
+            }
+        }, 50);
+
+        function loginUser() {
+            let username = document.getElementById("username").value;
+            let password = document.getElementById("password").value;
+            let errorBox = document.getElementById("errorBox");
+
+            if (localStorage.getItem(username) === password) {
+                sessionStorage.setItem("loggedInUser", username);
+                window.location.href = "/dashboard";
+            } else {
+                errorBox.style.display = "block";
+                setTimeout(() => { errorBox.style.display = "none"; }, 3000);
+            }
+        }
+    </script>
+
+</body>
+</html>

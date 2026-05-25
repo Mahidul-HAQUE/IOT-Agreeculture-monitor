@@ -1,0 +1,36 @@
+# Arduino IDE build artifacts
+*.elf
+*.hex
+*.bin
+*.map
+build/
+
+# Cordova / Node
+node_modules/
+platforms/
+plugins/
+.cordova/
+
+# Android build outputs
+*.apk
+*.aab
+*.keystore
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment / secrets — never commit WiFi credentials!
+secrets.h
+credentials.h
