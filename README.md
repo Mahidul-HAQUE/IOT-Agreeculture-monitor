@@ -6,6 +6,18 @@ An IoT-based agriculture monitoring system built with an Arduino + ESP32 hardwar
 
 ---
 
+## Team Members
+
+| # | Name | 
+|---|------|
+| 1 | Md. Mahidul Haque |
+| 2 | Md. Mahfuzur Rashid Ullash |
+| 3 | Md. Faruk Muntasir Banna |
+| 4 | Md. Abizar Gefari |
+| 5 | Md. Faizul Islam Leon |
+
+---
+
 ## 📋 Table of Contents
 
 - [System Overview](#system-overview)
